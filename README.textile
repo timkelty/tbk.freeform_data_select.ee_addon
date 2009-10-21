@@ -1,0 +1,5 @@
+h1. Freeform Template Select
+
+Creates selects populated by Freeform's templates or fields. Useful when managing forms as entries. 
+
+Required/non-required field settings work as expected when using *Drop-down Select* mode. Current workaround for multi-select is prepending a valueless '--' option to clear field selections.
