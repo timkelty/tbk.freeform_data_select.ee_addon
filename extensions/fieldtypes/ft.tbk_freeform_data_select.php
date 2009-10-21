@@ -5,6 +5,7 @@ if ( ! defined('EXT')) exit('Invalid file request');
 /**
  * Freeform Data Select
  */
+
 class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
 
   /**
@@ -13,20 +14,54 @@ class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
    */
 	var $info = array(
 		'name'     => 'Freeform Data Select',
-		'version'  => '1.0',
-		'no_lang'  => TRUE
+		'version'  => '1.1',
 	);
-  var $default_field_settings = array(
-  	'data_type' => 'fields'
+	var $requires = array(
+      'ff'        => '1.3.4',
   );
-
+  
+	var $default_site_settings = array(
+  	'null_option' => '--',
+  );
+  var $default_field_settings = array(
+  	'data_type' => 'fields',
+  );
   var $default_cell_settings = array(
-  	'data_type' => 'fields'
+  	'data_type' => 'fields',
   );
 	var $data_types = array(
 		'fields'       => 'Freeform Fields',
 		'templates'    => 'Freeform Templates',
 	);
+  
+  function _freeform_not_installed()
+  {
+    global $DB, $DSP, $LANG;
+    $LANG->fetch_language_file('tbk_freeform_data_select');
+    if (!$DB->table_exists('exp_freeform_fields'))
+    {
+     return $DSP->qdiv('highlight_alt', $LANG->line('no_freeform'));
+    } 
+  }
+
+	/**
+	 * Display Site Settings
+	 */
+	function display_site_settings()
+	{
+		global $DB, $PREFS, $DSP;
+		
+		$SD = new Fieldframe_SettingsDisplay();
+
+		$r = $SD->block()
+		   . $SD->row(array(
+		                  $SD->label('null_option_label', 'null_option_desc'),
+		                  $SD->text('null_option', $this->site_settings['null_option'])
+		              ))
+		   . $SD->block_c();
+
+		return $r;
+	}
 	
   /**
    * Display Field Settings
@@ -47,15 +82,19 @@ class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
    */
   function display_cell_settings($cell_settings)
   {
-    global $DSP;
+    global $DSP, $LANG;
   	// initialize Fieldframe_SettingsDisplay
   	$SD = new Fieldframe_SettingsDisplay();
-
-  	return  '<label>'
-            . $DSP->qdiv('itemWrapper defaultBold', 'Populate the select with:')
-            . $SD->select('data_type', $cell_settings['data_type'], $this->data_types)
-        	  . '</label>'
-        	  . '<div style="height: 5px;"></div>';
+    if ($this->_freeform_not_installed()) :
+		  $r = $this->_freeform_not_installed();
+		else:
+    	$r = '<label>'
+           . $DSP->qdiv('itemWrapper defaultBold', $LANG->line('populate_with'))
+           . $SD->select('data_type', $cell_settings['data_type'], $this->data_types)
+           . '</label>'
+           . '<div style="height: 5px;"></div>';
+    endif;
+    return $r;
   }
 
   /**
@@ -68,55 +107,61 @@ class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
    */
   function display_field($field_name, $field_data, $field_settings)
   {
-    global $DSP, $DB, $FF;
+    global $DSP, $LANG, $DB, $FF;
+    $LANG->fetch_language_file('tbk_freeform_data_select');
+		
+		if ($this->_freeform_not_installed()) :
+		  $r = $this->_freeform_not_installed();
+		else:
+      $r = ($FF->row['field_required'] == 'y') ? '' : $DSP->input_select_option('', $this->site_settings['null_option']);
     
-    $r = ($FF->row['field_required'] == 'y') ? '' : $DSP->input_select_option('', '--');
+      if ($field_settings['data_type'] == 'templates') {
+        $templates_q = $DB->query("SELECT ft.template_name, ft.template_label
+                                   FROM   exp_freeform_templates ft");
     
-    if ($field_settings['data_type'] == 'templates') {
-      $templates_q = $DB->query("SELECT ft.template_name, ft.template_label
-                                 FROM   exp_freeform_templates ft");
-
-      if ($templates_q->num_rows)
-      {
-        $multi_row_count = 0;
-        foreach($templates_q->result as $template)
+        if ($templates_q->num_rows)
         {
-          $selected = ($template['template_name'] == $field_data) ? 'y' : '';  
-          $r .= $DSP->input_select_option($template['template_name'], $template['template_label'], $selected);
-          $multi_row_count++;
+          $multi_row_count = 0;
+          foreach($templates_q->result as $template)
+          {
+            $selected = ($template['template_name'] == $field_data) ? 'y' : '';  
+            $r .= $DSP->input_select_option($template['template_name'], $template['template_label'], $selected);
+            $multi_row_count++;
+          }
+          $r = $DSP->input_select_header($field_name, '', ($multi_row_count < 15 ? $multi_row_count : 15), 'auto')
+          . $r
+          . $DSP->input_select_footer();
         }
-        $r = $DSP->input_select_header($field_name, '', ($multi_row_count < 15 ? $multi_row_count : 15), 'auto')
-        . $r
-        . $DSP->input_select_footer();
+        else {
+         $r = $DSP->qdiv('highlight_alt', $LANG->line('no_templates'));
+        }
       }
       else {
-       $r .= $DSP->qdiv('highlight_alt', 'No Freeform templates exist.');
-      }
-    }
-    else {
-      $fields_q = $DB->query("SELECT ff.name, ff.label
-                              FROM   exp_freeform_fields ff
-                              ORDER BY ff.field_order");
-
-      if ($fields_q->num_rows)      
-      {
-        $multi_row_count = 0;
-        foreach($fields_q->result as $field)
+        $fields_q = $DB->query("SELECT ff.name, ff.label
+                                FROM   exp_freeform_fields ff
+                                ORDER BY ff.field_order");
+    
+        if ($fields_q->num_rows)      
         {
-          $selected = ($field['name'] == $field_data) ? 'y' : '';  
-          $r .= $DSP->input_select_option($field['name'], $field['label'], $selected);
-          $multi_row_count++;
+          $multi_row_count = 0;
+          foreach($fields_q->result as $field)
+          {
+            $selected = ($field['name'] == $field_data) ? 'y' : '';  
+            $r .= $DSP->input_select_option($field['name'], $field['label'], $selected);
+            $multi_row_count++;
+          }
+    
+          $r = $DSP->input_select_header($field_name, '', ($multi_row_count < 15 ? $multi_row_count : 15), 'auto')
+              . $r
+              . $DSP->input_select_footer();
         }
-
-        $r = $DSP->input_select_header($field_name, '', ($multi_row_count < 15 ? $multi_row_count : 15), 'auto')
-            . $r
-            . $DSP->input_select_footer();
+        else {
+         $r = $DSP->qdiv('highlight_alt', $LANG->line('no_fields'));
+        }
       }
-      else {
-       $r .= $DSP->qdiv('highlight_alt', 'No Freeform fields exist.');
-      }
-    }
+    endif;
     return $r;
+    
 	}
 
 	/**
