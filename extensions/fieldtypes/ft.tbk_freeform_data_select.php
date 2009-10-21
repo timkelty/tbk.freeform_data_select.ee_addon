@@ -114,7 +114,7 @@ class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
 		if ($this->_freeform_not_installed()) :
 		  $r = $this->_freeform_not_installed();
 		else:
-      $r = ($required) ? '' : $DSP->input_select_option('', $this->site_settings['null_option']);
+      $r = ($required == 'y') ? '' : $DSP->input_select_option('', $this->site_settings['null_option']);
     
       if ($field_settings['data_type'] == 'templates') {
         $templates_q = $DB->query("SELECT ft.template_name, ft.template_label
