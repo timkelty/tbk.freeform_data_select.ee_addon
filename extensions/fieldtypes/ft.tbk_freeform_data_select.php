@@ -109,11 +109,12 @@ class Tbk_freeform_data_select extends Fieldframe_Fieldtype {
   {
     global $DSP, $LANG, $DB, $FF;
     $LANG->fetch_language_file('tbk_freeform_data_select');
+		$required = isset($FF->row['field_required']) ? $FF->row['field_required'] : null;
 		
 		if ($this->_freeform_not_installed()) :
 		  $r = $this->_freeform_not_installed();
 		else:
-      $r = ($FF->row['field_required'] == 'y') ? '' : $DSP->input_select_option('', $this->site_settings['null_option']);
+      $r = ($required) ? '' : $DSP->input_select_option('', $this->site_settings['null_option']);
     
       if ($field_settings['data_type'] == 'templates') {
         $templates_q = $DB->query("SELECT ft.template_name, ft.template_label
