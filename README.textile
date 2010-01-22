@@ -2,4 +2,4 @@ h1. Freeform Template Select
 
 Creates selects populated by Freeform's templates or fields. Useful when managing forms as entries. 
 
-Plays nice with EE's native required/non-required field settings.
+-Plays nice with EE's native required/non-required field settings.- It did...something broke or changed in FieldFrame?
